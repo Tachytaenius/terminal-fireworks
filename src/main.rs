@@ -70,7 +70,8 @@ fn main() -> Result <(), Box<dyn Error>> {
                 "Q, Esc: Quit",
                 "Space, Pause: Pause",
                 "F: Spawn firework",
-                "H: Toggle help"
+                "H: Toggle help",
+                "Check readme for info on font etc"
             ];
             ui::draw_window(1, 1, lines, &mut current_frame, Color::White, Color::Black)
         }

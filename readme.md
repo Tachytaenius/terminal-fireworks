@@ -1,5 +1,7 @@
 # Terminal Fireworks
 
+**WARNING**: Flashing lights. Not hugely, __unless you send up loads of fireworks or run the program wrong.__
+
 This is a Rust program for fireworks that runs in a terminal.
 It could be made better, but... it works on my machine, and hopefully yours too :3
 
