@@ -1,4 +1,3 @@
-use core::num;
 use std::{f32::{consts::TAU, NEG_INFINITY}, ops::Add, time::Duration};
 
 use crossterm::style::Color;
@@ -82,7 +81,9 @@ impl SmokeTile {
 pub struct State {
 	pub time: Duration,
 	pub particles: Vec<Particle>,
-	pub smoke_tiles: Vec<Vec<SmokeTile>>
+	pub smoke_tiles: Vec<Vec<SmokeTile>>,
+	pub new_firework_timer: f32,
+	pub new_firework_timer_length: f32
 }
 
 pub fn random_vec2_in_circle(radius: f32) -> Vec2 {
@@ -114,40 +115,42 @@ pub fn simulation_colour_to_crossterm_colour(colour: SimulationColour, darken: b
 	}
 }
 
-
 impl State {
-	pub fn new() -> Self {
+	pub fn spawn_firework(&mut self) {
 		let mut rng = rand::thread_rng();
-
-		let num_glitter_particles = 128;
-		let mut particles = Vec::with_capacity(1);
-		let speed = 48.0;
+		
+		let num_glitter_particles = rng.gen_range(64..=256);
+		let speed = rng.gen_range(32.0..64.0);
 		let position = Vec2::new(
-			random::<f32>() * NUM_COLUMNS as f32,
+			rng.gen_range(NUM_COLUMNS as f32 * 0.4 .. NUM_COLUMNS as f32 * 0.6),
 			NUM_ROWS as f32
 		);
-		let target = Vec2::new(NUM_ROWS as f32 / 2.0, 0.0);
-		let timer_length_f32 = 1.75;
+		let target = Vec2::new(NUM_COLUMNS as f32 / 2.0, 0.0) + random_vec2_in_circle(NUM_COLUMNS as f32 * 0.2);
+		let timer_length_f32 = rng.gen_range(1.25..2.0);
 		let mut contained_particles_vec = Vec::with_capacity(num_glitter_particles);
 		for _ in 0..num_glitter_particles {
 			contained_particles_vec.push(ContainedParticle {
 				colour: rand::random(),
 				base_smoke_emission: rng.gen_range(4.0..8.0),
 				contained_particles: None,
-				explosion_speed: random::<f32>().sqrt() * 32.0, // For uniform distribution
+				explosion_speed: random::<f32>().sqrt() * 32.0, // Sqrt for uniform distribution
 				timer_length: Duration::from_secs_f32(rng.gen_range(1.5..3.5))
 			})
 		}
-		particles.push(Particle {
+		self.particles.push(Particle {
 			position,
 			velocity: (target - position).normalize_or_zero() * speed,
-			base_smoke_emission: 3.0,
+			base_smoke_emission: rng.gen_range(2.0..4.0),
 			time_remaining: timer_length_f32,
 			to_remove: false,
 			colour: SimulationColour::White,
 			timer_length: Duration::from_secs_f32(timer_length_f32),
 			contained_particles: Some(contained_particles_vec)
 		});
+	}
+
+	pub fn new() -> Self {
+		let particles = Vec::new();
 
 		let mut smoke_tiles = Vec::with_capacity(NUM_COLUMNS);
 		for _ in 0..NUM_COLUMNS {
@@ -158,11 +161,14 @@ impl State {
 			smoke_tiles.push(column);
 		}
 
-		Self {
+		let ret = Self {
 			time: Duration::ZERO,
 			particles,
-			smoke_tiles
-		}
+			smoke_tiles,
+			new_firework_timer: 0.0,
+			new_firework_timer_length: 5.0
+		};
+		return ret;
 	}
 
 	pub fn update(&mut self, dt: Duration) {
@@ -217,6 +223,19 @@ impl State {
 		self.particles.retain(|particle| !particle.to_remove);
 		for particle in particles_to_add.iter() {
 			self.particles.push((*particle).clone());
+		}
+
+		// Spawn new fireworks
+		self.new_firework_timer -= dt_f32;
+		if self.new_firework_timer <= 0.0 {
+			self.new_firework_timer = self.new_firework_timer_length;
+			self.spawn_firework();
+			if random::<f32>() < 0.3 {
+				self.spawn_firework();
+			}
+			if random::<f32>() < 0.3 {
+				self.spawn_firework();
+			}
 		}
 		
 		self.time = self.time.saturating_add(dt);

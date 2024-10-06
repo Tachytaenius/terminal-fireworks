@@ -42,15 +42,18 @@ fn main() -> Result <(), Box<dyn Error>> {
         while event::poll(Duration::default())? {
             if let Event::Key(key_event) = event::read()? {
                 match key_event.code {
-                    KeyCode::Esc | KeyCode::Char('q') => {
+                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
                         break 'mainloop;
                     },
                     KeyCode::Char(' ') | KeyCode::Pause => {
                         paused = !paused;
                     },
-                    KeyCode::Char('h') => {
+                    KeyCode::Char('h') | KeyCode::Char('H') => {
                         show_help = !show_help;
-                    }
+                    },
+                    KeyCode::Char('f') | KeyCode::Char('F') => {
+                        state.spawn_firework();
+                    },
                     _ => {}
                 }
             }
@@ -66,6 +69,7 @@ fn main() -> Result <(), Box<dyn Error>> {
                 "Help:",
                 "Q, Esc: Quit",
                 "Space, Pause: Pause",
+                "F: Spawn firework",
                 "H: Toggle help"
             ];
             ui::draw_window(1, 1, lines, &mut current_frame, Color::White, Color::Black)
