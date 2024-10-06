@@ -25,7 +25,6 @@ fn main() -> Result <(), Box<dyn Error>> {
             };
             render::render(&mut stdout, &last_frame, &current_frame, false).unwrap();
             last_frame = current_frame;
-            thread::sleep(Duration::from_millis(SLEEP_MS));
         }
     });
 
