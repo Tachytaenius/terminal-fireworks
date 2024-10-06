@@ -74,14 +74,14 @@ fn main() -> Result <(), Box<dyn Error>> {
             for &line in lines.iter() {
                 greatest_width = greatest_width.max(line.chars().count());
             }
-            let window_width = greatest_width + 2;
-            let window_height = lines.len() + 2;
-            for local_y in 0..=lines.len()+1 {
+            let window_width = greatest_width + 4;
+            let window_height = lines.len() + 4;
+            for local_y in 0..=lines.len()+3 {
                 let y = window_y + local_y;
                 if y >= NUM_ROWS {
                     break;
                 }
-                for local_x in 0..=greatest_width+1 {
+                for local_x in 0..=greatest_width+3 {
                     let x = local_x + window_x;
                     if x >= NUM_COLUMNS {
                         break;
@@ -105,12 +105,12 @@ fn main() -> Result <(), Box<dyn Error>> {
                 }
             }
             for (line_number, &line) in lines.iter().enumerate() {
-                let y_index = window_y + 1 + line_number;
+                let y_index = window_y + 2 + line_number;
                 if y_index >= NUM_ROWS {
                     break;
                 }
                 for (char_number, char) in line.chars().into_iter().enumerate() {
-                    let x_index = window_x + 1 + char_number;
+                    let x_index = window_x + 2 + char_number;
                     if x_index >= NUM_COLUMNS {
                         break;
                     }
