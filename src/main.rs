@@ -3,7 +3,7 @@ use std::{error::Error, io, sync::mpsc, thread, time::{Duration, Instant}};
 use crossterm::{cursor::{Hide, Show}, event::{self, Event, KeyCode}, style::ResetColor, terminal::{self, Clear, ClearType}, ExecutableCommand};
 use terminal_fireworks::{frame, render, state::State};
 
-const SLEEP_MS: u64 = 1;
+const SLEEP_MS: u64 = 8;
 
 fn main() -> Result <(), Box<dyn Error>> {
     // Terminal
