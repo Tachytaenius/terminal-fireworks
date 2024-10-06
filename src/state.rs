@@ -1,3 +1,4 @@
+use core::num;
 use std::{f32::{consts::TAU, NEG_INFINITY}, ops::Add, time::Duration};
 
 use crossterm::style::Color;
@@ -10,15 +11,31 @@ pub const BLUR_SPEED: f32 = 16.0;
 pub const GRAVITY: Vec2 = Vec2::new(0.0, 8.0);
 pub const SMOKE_MAX_DENSITY: f32 = 8.0;
 pub const SMOKE_DISSIPATION_RATE: f32 = 0.5;
+pub const SMOKE_EMISSION_REDUCTION_POWER: f32 = 0.4;
 pub const SMOKE_TOTAL_DENSITY_PROBABILITY_START: f32 = 0.25;
 pub const ALLOW_COLOUR_FLICKER: bool = true;
 pub const ALLOW_DENSITY_FLICKER: bool = true;
 
+#[derive(Clone)]
+pub struct ContainedParticle {
+	colour: SimulationColour,
+	base_smoke_emission: f32,
+	contained_particles: Option<Vec<ContainedParticle>>,
+	explosion_speed: f32,
+	timer_length: Duration
+}
+
+#[derive(Clone)]
 pub struct Particle {
 	position: Vec2,
 	velocity: Vec2,
+	base_smoke_emission: f32,
+	time_remaining: f32,
+	to_remove: bool,
+
 	colour: SimulationColour,
-	smoke_emission: f32
+	timer_length: Duration,
+	contained_particles: Option<Vec<ContainedParticle>>
 }
 
 #[derive(Enum, Copy, Clone)]
@@ -100,19 +117,37 @@ pub fn simulation_colour_to_crossterm_colour(colour: SimulationColour, darken: b
 
 impl State {
 	pub fn new() -> Self {
-		let num_particles = 96;
-		let mut particles = Vec::with_capacity(num_particles);
-		for _ in 0..num_particles {
-			particles.push(Particle {
-				position: Vec2::new(
-					NUM_COLUMNS as f32 / 2.0,
-					NUM_ROWS as f32 / 2.0
-				),
-				velocity: random_vec2_in_circle(32.0),
+		let mut rng = rand::thread_rng();
+
+		let num_glitter_particles = 128;
+		let mut particles = Vec::with_capacity(1);
+		let speed = 48.0;
+		let position = Vec2::new(
+			random::<f32>() * NUM_COLUMNS as f32,
+			NUM_ROWS as f32
+		);
+		let target = Vec2::new(NUM_ROWS as f32 / 2.0, 0.0);
+		let timer_length_f32 = 1.75;
+		let mut contained_particles_vec = Vec::with_capacity(num_glitter_particles);
+		for _ in 0..num_glitter_particles {
+			contained_particles_vec.push(ContainedParticle {
 				colour: rand::random(),
-				smoke_emission: 6.0
-			});
+				base_smoke_emission: rng.gen_range(4.0..8.0),
+				contained_particles: None,
+				explosion_speed: random::<f32>().sqrt() * 32.0, // For uniform distribution
+				timer_length: Duration::from_secs_f32(rng.gen_range(1.5..3.5))
+			})
 		}
+		particles.push(Particle {
+			position,
+			velocity: (target - position).normalize_or_zero() * speed,
+			base_smoke_emission: 3.0,
+			time_remaining: timer_length_f32,
+			to_remove: false,
+			colour: SimulationColour::White,
+			timer_length: Duration::from_secs_f32(timer_length_f32),
+			contained_particles: Some(contained_particles_vec)
+		});
 
 		let mut smoke_tiles = Vec::with_capacity(NUM_COLUMNS);
 		for _ in 0..NUM_COLUMNS {
@@ -143,16 +178,45 @@ impl State {
 		}
 
 		// Update particles
+		let mut particles_to_add = Vec::new();
 		for particle in self.particles.iter_mut() {
 			// Smoke
 			if let Some((tile_x, tile_y)) = get_tile_pos(particle.position) {
 				let density = &mut self.smoke_tiles[tile_x][tile_y].colour_densities[particle.colour];
-				*density = (*density + particle.smoke_emission * dt_f32).min(SMOKE_MAX_DENSITY)
+				let length_f32 = particle.timer_length.as_secs_f32();
+				let emission_multiplier = (1.0 - (length_f32 - particle.time_remaining) / length_f32).powf(SMOKE_EMISSION_REDUCTION_POWER);
+				let effective_base_smoke_emission = particle.base_smoke_emission * emission_multiplier;
+				*density = (*density + effective_base_smoke_emission * dt_f32).min(SMOKE_MAX_DENSITY)
 			}
 
 			// Motion
 			particle.velocity += GRAVITY * dt_f32;
 			particle.position += particle.velocity * dt_f32;
+
+			// Time and removal
+			particle.time_remaining -= dt_f32;
+			if particle.time_remaining <= 0.0 {
+				particle.to_remove = true;
+				if particle.contained_particles.is_none() {
+					continue;
+				}
+				for contained_particle in particle.contained_particles.as_ref().unwrap().iter() {
+					particles_to_add.push(Particle {
+						position: particle.position,
+						velocity: contained_particle.explosion_speed * Vec2::from_angle(random::<f32>() * TAU), // No additive velocity
+						base_smoke_emission: contained_particle.base_smoke_emission,
+						time_remaining: contained_particle.timer_length.as_secs_f32(),
+						to_remove: false,
+						colour: contained_particle.colour,
+						timer_length: contained_particle.timer_length,
+						contained_particles: contained_particle.contained_particles.clone()
+					})
+				}
+			}
+		}
+		self.particles.retain(|particle| !particle.to_remove);
+		for particle in particles_to_add.iter() {
+			self.particles.push((*particle).clone());
 		}
 		
 		self.time = self.time.saturating_add(dt);
