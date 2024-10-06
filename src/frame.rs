@@ -4,7 +4,7 @@ use crate::{NUM_COLUMNS, NUM_ROWS};
 
 #[derive(PartialEq)]
 pub struct Tile {
-	pub icon: &'static str,
+	pub icon: char,
 	pub background_colour: Color,
 	pub foreground_colour: Color
 }
@@ -17,7 +17,7 @@ pub fn new_frame() -> Frame {
 		let mut column = Vec::with_capacity(NUM_ROWS);
 		for _ in 0..NUM_ROWS {
 			column.push(Tile {
-				icon: " ",
+				icon: ' ',
 				background_colour: Color::Black,
 				foreground_colour: Color::White
 			});

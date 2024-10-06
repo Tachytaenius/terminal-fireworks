@@ -118,7 +118,7 @@ impl State {
 		for _ in 0..NUM_COLUMNS {
 			let mut column = Vec::with_capacity(NUM_ROWS);
 			for _ in 0..NUM_ROWS {
-				column.push(SmokeTile::new())
+				column.push(SmokeTile::new());
 			}
 			smoke_tiles.push(column);
 		}
@@ -162,21 +162,21 @@ impl State {
 		for particle in self.particles.iter() {
 			if let Some((tile_x, tile_y)) = get_tile_pos(particle.position) {
 				let icon = if particle.velocity.length() < BLUR_SPEED {
-					"\u{2219}" // Bullet operator
+					'\u{2219}' // Bullet operator
 				} else {
 					 // I think there might be a better way to get the direction in 8ths involving the difference between the x and the y of the normalised version
 					let angle = particle.velocity.to_angle().add(TAU / 16.0).rem_euclid(TAU); // rem_euclid is true modulo (iirc) in that it handles negatives
 					let direction_identifier = (angle / TAU * 8.0) as isize;
 					match direction_identifier {
-						0 => {"-"},
-						1 => {"\\"},
-						2 => {"|"},
-						3 => {"/"},
-						4 => {"-"},
-						5 => {"\\"},
-						6 => {"|"},
-						7 => {"/"},
-						_ => {"?"}
+						0 => {'-'},
+						1 => {'\\'},
+						2 => {'|'},
+						3 => {'/'},
+						4 => {'-'},
+						5 => {'\\'},
+						6 => {'|'},
+						7 => {'/'},
+						_ => {'?'}
 					}
 				};
 				frame[tile_x][tile_y] = Tile {
